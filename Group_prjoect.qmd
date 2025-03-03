@@ -1,0 +1,20 @@
+---
+title: "Group_Project"
+format: html
+editor: visual
+---
+
+## Quarto
+
+## Libraries:
+
+```{r}
+library(haven)
+```
+
+Data:
+
+```{r}
+#| echo: false
+daten <- read_dta("ZA7575.dta")
+```
