@@ -10,11 +10,112 @@ editor: visual
 
 ```{r}
 library(haven)
+library(dplyr)
 ```
 
 Data:
 
 ```{r}
 #| echo: false
-daten <- read_dta("ZA7575.dta")
+data <- read_dta("ZA7575.dta")
 ```
+
+
+```{r}
+#| echo: false
+summary(data)
+head(data)
+
+
+column_info <- data.frame(
+  column_name = colnames(data),
+  column_label = sapply(data, function(x) attr(x, "label"))
+)
+
+column_info
+
+data <- data %>%
+  mutate(country_name = case_when(
+    q1_1  == 1 ~ "Belgium",
+    q1_2  == 1 ~ "Denmark",
+    q1_3  == 1 ~ "Germany",
+    q1_4  == 1 ~ "Greece",
+    q1_5  == 1 ~ "Spain",
+    q1_6  == 1 ~ "France",
+    q1_7  == 1 ~ "Ireland",
+    q1_8  == 1 ~ "Italy",
+    q1_9  == 1 ~ "Luxembourg",
+    q1_10 == 1 ~ "Netherlands",
+    q1_11 == 1 ~ "Portugal",
+    q1_12 == 1 ~ "United Kingdom",
+    q1_13 == 1 ~ "Austria",
+    q1_14 == 1 ~ "Sweden",
+    q1_15 == 1 ~ "Finland",
+    q1_16 == 1 ~ "Cyprus",
+    q1_17 == 1 ~ "Czech Republic",
+    q1_18 == 1 ~ "Estonia",
+    q1_19 == 1 ~ "Hungary",
+    q1_20 == 1 ~ "Latvia",
+    q1_21 == 1 ~ "Lithuania",
+    q1_22 == 1 ~ "Malta",
+    q1_23 == 1 ~ "Poland",
+    q1_24 == 1 ~ "Slovakia",
+    q1_25 == 1 ~ "Slovenia",
+    q1_26 == 1 ~ "Bulgaria",
+    q1_27 == 1 ~ "Romania",
+    q1_28 == 1 ~ "Croatia",
+    q1_29 == 1 ~ "Other countries",
+    q1_30 == 1 ~ "DK",
+    TRUE ~ NA_character_  # Falls keine der Bedingungen zutrifft
+  ))
+
+
+
+legal_framework <- data |> 
+  select()
+
+```
+
+
+## legal framework
+
+QC19:Do you think that transgender persons should be able to change their civil documents to
+match their inner gender identity?(1=yes, 2=no,3=dk)
+QC20: Do you believe that official documents, like passports and birth certificates, should have a
+third option, such as X or O (other) beside male (M) and female (F)for those persons who do
+not identify as female and male? (1=yes, 2=no,3=dk)
+QC15_1: to what extend to do you agree or disagree with the following statement? Gay, lesbian and bisexual people should have the same rights as heterosexual people (1 2 3 4 5)
+QC15_2: to what extend to do you agree or disagree with the following statement? here is nothing wrong in a sexual relationship between two persons of the same sex(1 2 3 4 5)
+QC15_3: to what extend to do you agree or disagree with the following statement?  Same sex marriages should be allowed throughout europe (1 2 3 4 5)
+QC4_7: In (OUR COUNTRY) when a company wants to hire someone and has the choice between
+two candidates with equal skills and qualifications, which of the following criteria may, in
+your opinion, put one candidate at a disadvantage? The candidate’s gender or sex (man or woman) 
+QC4_8: In (OUR COUNTRY) when a company wants to hire someone and has the choice between
+two candidates with equal skills and qualifications, which of the following criteria may, in
+your opinion, put one candidate at a disadvantage? The candidate’s gender identity (being transgender) 
+QC5_3: in the last 12 month have you done:  You have joined an association or campaign that defends people against discrimination? (1=yes, 2=no,3=dk)
+QC7: Using a scale from 1 to 10, please tell me if you think that the efforts made in (OUR
+COUNTRY) to fight all forms of discrimination are effective. ‘1’ means you consider that these
+efforts are "not at all effective", and ‘10’ that these efforts are "very effective".
+
+```{r}
+#| echo: false
+
+legal_framework_data <- data %>%
+  select(
+    qc19,        # TRANSGENDER - CHANGE CIVIL DOCUMENTS
+    qc20,        # OFFICIAL DOCUMENTS SHOULD INCLUDE THIRD GENDER OPTION
+    qc15_1,      # LGB STATEMENTS - SAME RIGHTS AS HETEROSEXUAL
+    qc15_2,      # LGB STATEMENTS - NOTHING WRONG WITH SAME SEX RELATIONSHIPS
+    qc15_3,      # LGB STATEMENTS - ALLOW SAME SEX MARRIAGE THROUGHOUT EUROPE
+    qc4_7,       # JOB CANDIDATE DISADVANTAGE: GENDER
+    qc4_8,       # JOB CANDIDATE DISADVANTAGE: GENDER IDENTITY
+    qc5_3,       # ACTIONS AGAINST DISCRIMINATION - JOINED ASSOCIATION/CAMPAIGN
+    qc7,          # EFFORTS TO FIGHT DISCRIMINATION - RATING
+    country_name
+  )
+
+print(legal_framework_data)
+
+```
+
