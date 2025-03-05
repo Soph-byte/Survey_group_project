@@ -95,7 +95,7 @@ legal_framework_data <- data %>%
     country_name
   )
 
-
+#convert to factor, for further processing
 legal_framework_data<- legal_framework_data %>%
   mutate(across(everything(), as.factor))
 
@@ -103,7 +103,6 @@ str(legal_framework_data)
 
 
 ```
-
 
 
 
@@ -116,11 +115,59 @@ qc19_summary <- legal_framework_data %>%
   summarise(count = n()) %>%
   mutate(percentage = count / sum(count) * 100)
 
-ggplot(qc19_summary %>% filter(qc19 == "1"), aes(x = reorder(country_name, -percentage), y = percentage)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  coord_flip() +
-  labs(title = "Support for transgender document change (qc19) per country",
-       x = "Country", y = "Rate (%)") +
-  theme_minimal()
-
 ```
+
+
+Transgender Rights in Europe: Which Countries Support Legal Gender Changes?
+
+```{r}
+qc19_summary_sorted <- qc19_summary %>%
+  filter(qc19 == "1") %>%
+  arrange(percentage)
+
+ggplot(qc19_summary_sorted, aes(x = reorder(country_name, percentage), y = percentage, fill = percentage)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  coord_flip() +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") + # Farbverlauf für bessere Lesbarkeit
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), hjust = -0.2, size = 5, fontface = "bold") +
+  labs(
+    title = "Support for Transgender Document Change (qc19) per Country",
+    x = "Country",
+    y = "Support Rate (%)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.position = "none"
+  )
+```
+
+
+```{r}
+qc19_20_summary <- legal_framework_data %>%
+  filter(qc19 %in% c("1", "2"), qc20 %in% c("1", "2")) %>% # Nur Ja/Nein-Antworten
+  group_by(country_name, qc19, qc20) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(percentage = count / sum(count) * 100)
+
+ggplot(qc19_20_summary, aes(x = reorder(country_name, -percentage), y = percentage, fill = qc20)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(
+    title = "Support for Transgender Document Change (qc19) vs. Third Gender Option (qc20)",
+    x = "Country", y = "Percentage", fill = "Third Gender Option Support"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+```{r}
+lgbt_index <- read.csv("lgbt-rights-index.csv")
+```
+
+
+
