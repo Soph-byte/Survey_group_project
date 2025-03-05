@@ -11,6 +11,7 @@ editor: visual
 ```{r}
 library(haven)
 library(dplyr)
+library(ggplot2)
 ```
 
 Data:
@@ -19,7 +20,6 @@ Data:
 #| echo: false
 data <- read_dta("ZA7575.dta")
 ```
-
 
 ```{r}
 #| echo: false
@@ -71,32 +71,12 @@ data <- data %>%
 
 
 
-legal_framework <- data |> 
-  select()
 
 ```
 
-
 ## legal framework
 
-QC19:Do you think that transgender persons should be able to change their civil documents to
-match their inner gender identity?(1=yes, 2=no,3=dk)
-QC20: Do you believe that official documents, like passports and birth certificates, should have a
-third option, such as X or O (other) beside male (M) and female (F)for those persons who do
-not identify as female and male? (1=yes, 2=no,3=dk)
-QC15_1: to what extend to do you agree or disagree with the following statement? Gay, lesbian and bisexual people should have the same rights as heterosexual people (1 2 3 4 5)
-QC15_2: to what extend to do you agree or disagree with the following statement? here is nothing wrong in a sexual relationship between two persons of the same sex(1 2 3 4 5)
-QC15_3: to what extend to do you agree or disagree with the following statement?  Same sex marriages should be allowed throughout europe (1 2 3 4 5)
-QC4_7: In (OUR COUNTRY) when a company wants to hire someone and has the choice between
-two candidates with equal skills and qualifications, which of the following criteria may, in
-your opinion, put one candidate at a disadvantage? The candidate’s gender or sex (man or woman) 
-QC4_8: In (OUR COUNTRY) when a company wants to hire someone and has the choice between
-two candidates with equal skills and qualifications, which of the following criteria may, in
-your opinion, put one candidate at a disadvantage? The candidate’s gender identity (being transgender) 
-QC5_3: in the last 12 month have you done:  You have joined an association or campaign that defends people against discrimination? (1=yes, 2=no,3=dk)
-QC7: Using a scale from 1 to 10, please tell me if you think that the efforts made in (OUR
-COUNTRY) to fight all forms of discrimination are effective. ‘1’ means you consider that these
-efforts are "not at all effective", and ‘10’ that these efforts are "very effective".
+QC19:Do you think that transgender persons should be able to change their civil documents to match their inner gender identity?(1=yes, 2=no,3=dk) QC20: Do you believe that official documents, like passports and birth certificates, should have a third option, such as X or O (other) beside male (M) and female (F)for those persons who do not identify as female and male? (1=yes, 2=no,3=dk) QC15_1: to what extend to do you agree or disagree with the following statement? Gay, lesbian and bisexual people should have the same rights as heterosexual people (1 2 3 4 5) QC15_2: to what extend to do you agree or disagree with the following statement? here is nothing wrong in a sexual relationship between two persons of the same sex(1 2 3 4 5) QC15_3: to what extend to do you agree or disagree with the following statement? Same sex marriages should be allowed throughout europe (1 2 3 4 5) QC4_7: In (OUR COUNTRY) when a company wants to hire someone and has the choice between two candidates with equal skills and qualifications, which of the following criteria may, in your opinion, put one candidate at a disadvantage? The candidate’s gender or sex (man or woman) QC4_8: In (OUR COUNTRY) when a company wants to hire someone and has the choice between two candidates with equal skills and qualifications, which of the following criteria may, in your opinion, put one candidate at a disadvantage? The candidate’s gender identity (being transgender) QC5_3: in the last 12 month have you done: You have joined an association or campaign that defends people against discrimination? (1=yes, 2=no,3=dk) QC7: Using a scale from 1 to 10, please tell me if you think that the efforts made in (OUR COUNTRY) to fight all forms of discrimination are effective. ‘1’ means you consider that these efforts are "not at all effective", and ‘10’ that these efforts are "very effective".
 
 ```{r}
 #| echo: false
@@ -115,7 +95,32 @@ legal_framework_data <- data %>%
     country_name
   )
 
-print(legal_framework_data)
+
+legal_framework_data<- legal_framework_data %>%
+  mutate(across(everything(), as.factor))
+
+str(legal_framework_data)
+
 
 ```
 
+
+
+
+
+```{r}
+#| echo: false
+
+qc19_summary <- legal_framework_data %>%
+  group_by(country_name, qc19) %>%
+  summarise(count = n()) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+ggplot(qc19_summary %>% filter(qc19 == "1"), aes(x = reorder(country_name, -percentage), y = percentage)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Support for transgender document change (qc19) per country",
+       x = "Country", y = "Rate (%)") +
+  theme_minimal()
+
+```
