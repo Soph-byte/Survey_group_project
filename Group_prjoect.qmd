@@ -17,6 +17,8 @@ library(lubridate)
 library(corrr)
 library(ggplot2)
 library(ggcorrplot)
+library(tidyr)
+library(scales)
 ```
 
 Data:
@@ -81,7 +83,7 @@ data <- data %>%
 
 ## legal framework
 
-QC19:Do you think that transgender persons should be able to change their civil documents to match their inner gender identity?(1=yes, 2=no,3=dk) QC20: Do you believe that official documents, like passports and birth certificates, should have a third option, such as X or O (other) beside male (M) and female (F)for those persons who do not identify as female and male? (1=yes, 2=no,3=dk) QC15_1: to what extend to do you agree or disagree with the following statement? Gay, lesbian and bisexual people should have the same rights as heterosexual people (1 2 3 4 5) QC15_2: to what extend to do you agree or disagree with the following statement? here is nothing wrong in a sexual relationship between two persons of the same sex(1 2 3 4 5) QC15_3: to what extend to do you agree or disagree with the following statement? Same sex marriages should be allowed throughout europe (1 2 3 4 5) QC4_7: In (OUR COUNTRY) when a company wants to hire someone and has the choice between two candidates with equal skills and qualifications, which of the following criteria may, in your opinion, put one candidate at a disadvantage? The candidate’s gender or sex (man or woman) QC4_8: In (OUR COUNTRY) when a company wants to hire someone and has the choice between two candidates with equal skills and qualifications, which of the following criteria may, in your opinion, put one candidate at a disadvantage? The candidate’s gender identity (being transgender) QC5_3: in the last 12 month have you done: You have joined an association or campaign that defends people against discrimination? (1=yes, 2=no,3=dk) QC7: Using a scale from 1 to 10, please tell me if you think that the efforts made in (OUR COUNTRY) to fight all forms of discrimination are effective. ‘1’ means you consider that these efforts are "not at all effective", and ‘10’ that these efforts are "very effective".
+QC19:Do you think that transgender persons should be able to change their civil documents to match their inner gender identity?(1=yes, 2=no,3=dk) QC20: Do you believe that official documents, like passports and birth certificates, should have a third option, such as X or O (other) beside male (M) and female (F)for those persons who do not identify as female and male? (1=yes, 2=no,3=dk) QC15_1: to what extend to do you agree or disagree with the following statement? Gay, lesbian and bisexual people should have the same rights as heterosexual people (1 2 3 4 5) QC15_2: to what extend to do you agree or disagree with the following statement? here is nothing wrong in a sexual relationship between two persons of the same sex(1 2 3 4 5) QC15_3: to what extend to do you agree or disagree with the following statement? Same sex marriages should be allowed throughout europe (1 2 3 4 5) QC4_7: In (OUR COUNTRY) when a company wants to hire someone and has the choice between two candidates with equal skills and qualifications, which of the following criteria may, in your opinion, put one candidate at a disadvantage? The candidate’s gender or sex (man or woman) QC4_8: In (OUR COUNTRY) when a company wants to hire someone and has the choice between two candidates with equal skills and qualifications, which of the following criteria may, in your opinion, put one candidate at a disadvantage? The candidate’s gender identity (being transgender) QC5_3: in the last 12 month have you done: You have joined an association or campaign that defends people against discrimination? (1=yes, 2=no,3=dk) 
 
 ```{r}
 #| echo: false
@@ -96,7 +98,6 @@ legal_framework_data <- data %>%
     qc4_7,       # JOB CANDIDATE DISADVANTAGE: GENDER
     qc4_8,       # JOB CANDIDATE DISADVANTAGE: GENDER IDENTITY
     qc5_3,       # ACTIONS AGAINST DISCRIMINATION - JOINED ASSOCIATION/CAMPAIGN
-    qc7,          # EFFORTS TO FIGHT DISCRIMINATION - RATING
     country_name
   )
 
@@ -108,29 +109,94 @@ legal_framework_data<- legal_framework_data %>%
 str(legal_framework_data)
 
 
+desc_stats <- legal_framework_data %>%
+  summarise(
+    # Binary (0/1: y/n, 3 = idk)
+    Mean_Binary_qc19 = mean(as.numeric(qc19), na.rm = TRUE),  
+    Mean_Binary_qc20 = mean(as.numeric(qc20), na.rm = TRUE),  
+    
+    # Likert-Skalen (1-5)
+    Mean_Likert_qc15_1 = mean(as.numeric(qc15_1), na.rm = TRUE),  
+    Mean_Likert_qc15_2 = mean(as.numeric(qc15_2), na.rm = TRUE),
+    Mean_Likert_qc15_3 = mean(as.numeric(qc15_3), na.rm = TRUE)
+  )
+
+print(desc_stats)
+
 ```
+
+The analysis shows clear differences in support for various aspects of LGBT+ rights. It is particularly noticeable that both transgender-relevant topics and LGB rights tend to be rated positively overall, but with certain differences in the intensity of approval.
+The average agreement with the possibility of transgender people being able to adapt their official documents to their gender identity (qc19) is 1.59. This indicates that a majority of respondents are in favor of this measure, although “Don't Know” responses could play a role. The introduction of a third gender option on official documents (qc20) received slightly less approval with an average value of 1.72, which indicates that this measure is discussed somewhat more controversially.
+
+In comparison, the values for the general equality of LGB people (qc15_1,, qc15_2 , qc15_3) are more on the approving side of the scale with average values between 2.17 and 2.38 (1 = strongly approve, 5 = strongly disapprove). This means that the majority of respondents tend to agree with these statements. However, the values are not extremely low, which indicates that there is still a certain skepticism or reluctance in parts of the population.
+
+Identifiying how much people choosed the third option: i dont know in percentage:
+```{r}
+dk_percentage <- legal_framework_data %>%
+  summarise(
+    qc19 = sum(qc19 == 3, na.rm = TRUE) / n() * 100,
+    qc20 = sum(qc20 == 3, na.rm = TRUE) / n() * 100
+  )
+
+dk_percentage
+
+```
+qc19 (Transgender people should be able to adapt official documents) → 11.95%
+qc20 (Third gender option in official documents) → 11.62%
+
+Country differences: 
+```{r}
+
+dk_summary <- legal_framework_data %>%
+  group_by(country_name) %>%
+  summarise(
+    DK_qc19 = sum(qc19 == 3, na.rm = TRUE) / n() * 100,
+    DK_qc20 = sum(qc20 == 3, na.rm = TRUE) / n() * 100
+  ) %>%
+  pivot_longer(cols = c(DK_qc19, DK_qc20), names_to = "Question", values_to = "DK_Percentage")
+
+
+ggplot(dk_summary, aes(x = reorder(country_name, DK_Percentage), y = DK_Percentage, fill = Question)) +
+  geom_bar(stat = "identity", position = "dodge", color = "black") +
+  coord_flip() +
+  scale_fill_manual(values = c("DK_qc19" = "pink", "DK_qc20" = "orange"),
+                    labels = c("qc19: Transgender documentchange", "qc20: third genderoption")) +
+  labs(title = "Don't Know Rate ",
+       x = "country", y = "% of dont know answers",
+       fill = "Frage") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10, face = "bold"))
+
+
+
+```
+-> yyou can see clear differences in the response rates. While in bulgaria every 5. person selected "dont know" for transgender document change (qc19) in Belgium only less than 5% choosed this option.
+
 
 ```{r}
 #| echo: false
 
-qc19_summary <- legal_framework_data %>%
-  group_by(country_name, qc19) %>%
-  summarise(count = n()) %>%
-  mutate(percentage = count / sum(count) * 100)
+
 
 ```
 
 Transgender Rights in Europe: Which Countries Support Legal Gender Changes?
 
 ```{r}
-qc19_summary_sorted <- qc19_summary %>%
+qc19_summary_sorted <- legal_framework_data %>%
+  group_by(country_name) %>%
+  mutate(total_responses = n()) %>%  # Gesamtanzahl der Antworten pro Land berechnen
+  group_by(country_name, qc19) %>%
+  summarise(count = n(), total_responses = first(total_responses), .groups = "drop") %>%
+  mutate(percentage = (count / total_responses) * 100) %>%
   filter(qc19 == "1") %>%
   arrange(percentage)
+
 
 ggplot(qc19_summary_sorted, aes(x = reorder(country_name, percentage), y = percentage, fill = percentage)) +
   geom_bar(stat = "identity", color = "black", width = 0.7) +
   coord_flip() +
-  scale_fill_gradient(low = "lightblue", high = "darkblue") + # Farbverlauf für bessere Lesbarkeit
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
   geom_text(aes(label = paste0(round(percentage, 1), "%")), hjust = -0.2, size = 5, fontface = "bold") +
   labs(
     title = "Support for Transgender Document Change (qc19) per Country",
@@ -144,14 +210,37 @@ ggplot(qc19_summary_sorted, aes(x = reorder(country_name, percentage), y = perce
     axis.title = element_text(size = 14),
     legend.position = "none"
   )
+
+
+ggplot(qc19_summary_sorted, aes(x = reorder(country_name, percentage), y = percentage, fill = percentage)) +
+  geom_bar(stat = "identity", color = "black", width = 0.7) +
+  coord_flip() +
+  scale_fill_gradientn(
+    colors = c("red", "orange", "yellow", "green", "blue", "purple"), 
+    values = rescale(c(min(qc19_summary_sorted$percentage), max(qc19_summary_sorted$percentage))),
+    guide = "colorbar"
+  ) +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), hjust = -0.2, size = 5, fontface = "bold") +
+  labs(
+    title = "Support for Transgender Document Change (qc19) per Country",
+    x = "Country",
+    y = "Support Rate (%)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.position = "right"
+  )
+
+
 ```
+Results: The Netherlands (88%), Spain (76%) and Malta (76%) are the countries with the highest approval ratings.Countries such as Germany (62%), Sweden (62%) and Austria (57%) also show a majority in favor of changing the law, but at a lower level than the frontrunners. In these countries, there appears to be ongoing social debate and differing opinions. Bulgaria (12%), Hungary (14%), Romania (22%) and Slovakia (24%) have the lowest approval ratings.
 
 
-The Data is from: https://ourworldindata.org/grapher/lgbt-rights-index?time=2012&region=Europe
-The index captures to which extent LGBT+ people have the same rights as straight and cisgender people. It combines 18 individual policies, such as the legality of
-same-sex relationships, marriage, and gender marker changes. Higher values indicate more rights, negative values regressive policies
-progressive policies receiving a positive score and regressive policies receiving a negative score: -5 to +13.
-Among the progressive policies are: Same-sex sexual acts Legal, Equal Age of Consent, Employment Discrimination, Hate Crime Protections, Incitement to Hatred, Civil Unions, Marriage Equality, *oint Adoptions, Gender Marker Change, LGB Military, Transgender Military, Ban on Conversion Therapies, and Ban on Gender Assignment Surgeries on Children
+Because there arent so many variables for legal framework, we included the lgtb-rights index-data.
+The Data is from: https://ourworldindata.org/grapher/lgbt-rights-index?time=2012&region=Europe The index captures to which extent LGBT+ people have the same rights as straight and cisgender people. It combines 18 individual policies, such as the legality of same-sex relationships, marriage, and gender marker changes. Higher values indicate more rights, negative values regressive policies progressive policies receiving a positive score and regressive policies receiving a negative score: -5 to +13. Among the progressive policies are: Same-sex sexual acts Legal, Equal Age of Consent, Employment Discrimination, Hate Crime Protections, Incitement to Hatred, Civil Unions, Marriage Equality, oint Adoptions, Gender Marker Change, LGB Military, Transgender Military, Ban on Conversion Therapies, and Ban on Gender Assignment Surgeries on Children
 
 ```{r}
 lgbt_index <- read.csv("lgbt-rights-index.csv")
@@ -167,26 +256,28 @@ merged_data <- legal_framework_data %>%
 
 ggplot(merged_data, aes(x = LGBT..Policy.Index, y = reorder(country_name, LGBT..Policy.Index), color = LGBT..Policy.Index)) +
   geom_point(size = 4) +
-  scale_color_gradient(low = "red", high = "blue") +  # Farbverlauf für bessere Lesbarkeit
+  scale_color_gradient(low = "red", high = "blue") +  
   labs(title = "LGBT Policy Index by Country",
        x = "LGBT Policy Index", y = "Country") +
   theme_minimal() +
   theme(axis.text.y = element_text(size = 10, face = "bold"))
 
 ```
-Malta has the highest score, well above all other countries.
-Scandinavian & Western European countries (Sweden, Netherlands, UK, Germany, France) have relatively high values.
-Eastern European countries (Latvia, Poland, Bulgaria, Romania, Hungary) have the lowest values in the LGBT Index.
 
+Malta has the highest score, well above all other countries. Scandinavian & Western European countries (Sweden, Netherlands, UK, Germany, France) have relatively high values. Eastern European countries (Latvia, Poland, Bulgaria, Romania, Hungary) have the lowest values in the LGBT Index.
 
 We wanted to investigate whether there are significant differences in the laws in different parts of Europe. We therefore divided the countries into Eastern, Western, Southern and Northern Europe and compared the LGTB score.
+
 ```{r}
 merged_data <- merged_data %>%
   mutate(region = case_when(
     country_name %in% c("Denmark", "Sweden", "Finland", "Estonia", "Latvia", "Lithuania") ~ "Northern Europe",
-    country_name %in% c("Germany", "France", "Netherlands", "Belgium", "Luxembourg", "United Kingdom", "Ireland", "Austria") ~ "Western Europe",
+    country_name %in% c("Germany", "France", "Netherlands", "Belgium", "Luxembourg", 
+                        "United Kingdom", "United Kingdom of Great Britain and Northern Ireland",  
+                        "Ireland", "Austria") ~ "Western Europe",
     country_name %in% c("Spain", "Italy", "Portugal", "Greece", "Malta", "Cyprus") ~ "Southern Europe",
-    country_name %in% c("Poland", "Hungary", "Czech Republic", "Slovakia", "Romania", "Bulgaria", "Croatia", "Slovenia") ~ "Eastern Europe",
+    country_name %in% c("Poland", "Hungary", "Czech Republic", "Slovakia", "Romania", 
+                        "Bulgaria", "Croatia", "Slovenia") ~ "Eastern Europe",
     TRUE ~ "Other"
   ))
 
@@ -198,33 +289,28 @@ ggplot(merged_data, aes(x = region, y = LGBT..Policy.Index, fill = region)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-anova_result <- aov(LGBT..Policy.Index ~ region, data = merged_data)
-summary(anova_result)
 
              
 ```
-Western Europe has the highest LGBT index, with a high median and a relatively small range.
-Northern Europe shows a large variance, with some countries having very high values and others in the middle.
-Southern Europe is lower overall than Northern and Western Europe, with a wide range of values.
-Eastern Europe has the lowest values, with a median of around 5 and lower protection rights for LGBT people.
 
-The ANOVA analysis shows a highly significant difference between the regions (p < 2e-16), which means that the differences in the LGBT index between the regions are statistically significant.
+Western Europe has the highest LGBT index, with a high median and a relatively small range. Northern Europe shows a large variance, with some countries having very high values and others in the middle. Southern Europe is lower overall than Northern and Western Europe, with a wide range of values. Eastern Europe has the lowest values, with a median of around 5 and lower protection rights for LGBT people.
+```{r}
+anova_result <- aov(LGBT..Policy.Index ~ region, data = merged_data)
+summary(anova_result)
+```
+
+The ANOVA analysis shows a highly significant difference between the regions (p \< 2e-16), which means that the differences in the LGBT index between the regions are statistically significant.
 
 Interpretation: LGBT policy differs systematically between the regions, with Western Europe and Northern Europe having significantly higher values than Eastern Europe and Southern Europe.
 
-
 ```{r}
-
 cor_data <- merged_data %>%
-  select(qc19, qc20, qc15_1, qc15_2, qc15_3, qc7,LGBT..Policy.Index) %>%
+  select(qc19, qc20, qc15_1, qc15_2, qc15_3,LGBT..Policy.Index) %>%
   mutate(across(everything(), as.numeric))  
-
 
 cor_matrix <- cor(cor_data, use = "pairwise.complete.obs")
 
-
 print(cor_matrix)
-
 
 ggcorrplot(cor_matrix, method = "circle", type = "lower",
            lab = TRUE, lab_size = 4, colors = c("red", "white", "blue"),
@@ -232,7 +318,17 @@ ggcorrplot(cor_matrix, method = "circle", type = "lower",
              
 ```
 
-The correlation table highlights interesting connections between societal views on LGBTI+ rights and the LGBT Policy Index.
-The strongest positive correlation appears between these variables: qc15_1 which gauges equal rights for LGB people; qc15_2 which measures acceptance of same-sex relationships; and qc15_3 which covers marriage equality. These values range from 0.75 to 0.82. It indicates that nations with high acceptance of LGB rights generally back marriage equality too.
-There's a moderate correlation between qc19 which covers support for transgender document changes and qc20 which deals with a third gender option, clocking in at 0.59. This suggests that countries with advanced laws for trans people often favor a third gender option on official documents as well.
-But the correlations between qc19/qc20 and general LGBTI+ attitudes ‒ qc15_* ‒ are moderate (0.33–0.43). A positive attitude towards LGB rights often occurs alongside supportive views on trans issues.
+The correlation table highlights interesting connections between societal views on LGBTI+ rights and the LGBT Policy Index. The strongest positive correlation appears between these variables: qc15_1 which gauges equal rights for LGB people; qc15_2 which measures acceptance of same-sex relationships; and qc15_3 which covers marriage equality. These values range from 0.75 to 0.82. It indicates that nations with high acceptance of LGB rights generally back marriage equality too. There's a moderate correlation between qc19 which covers support for transgender document changes and qc20 which deals with a third gender option, clocking in at 0.59. This suggests that countries with advanced laws for trans people often favor a third gender option on official documents as well. But the correlations between qc19/qc20 and general LGBTI+ attitudes ‒ qc15\_\* ‒ are moderate (0.33–0.43). A positive attitude towards LGB rights often occurs alongside supportive views on trans issues.
+
+```{r}
+
+lm_model <- lm(LGBT..Policy.Index ~ qc19 + qc20 + qc15_1 + qc15_2 + qc15_3, data = merged_data)
+
+summary(lm_model)
+```
+
+The results show that approval of LGBT rights is strongly associated with a higher LGBT Policy Index.
+the strongest negative effects come from rejection of “marriage for all” (-1.76 points) and same-sex relationships (-0.94 points).
+neutral answers (“don't know”) are often as negative as rejection - uncertainty is therefore a strong signal for less legal protection of LGBT+ rights.
+the transgender-specific questions (qc19, qc20) are also significant, but with somewhat weaker effects than LGB rights.
+the model is significant, but only explains approx. 26.5% of the variance - other factors also play a role.
